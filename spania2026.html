@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Spania 2026"/>
+<title>Spain · Italy · France 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Nunito',sans-serif;background:#0d0d0f;color:#fff;-webkit-tap-highlight-color:transparent}
+.wrap{padding:36px 0 80px}
+
+/* HEADER */
+.site-header{max-width:800px;margin:0 auto 20px;padding:0 36px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.site-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1}
+.site-sub{font-size:13px;color:#555;margin-top:6px;font-weight:700}
+.hbadge{background:#1a1a1f;border:1px solid #2a2a32;border-radius:24px;padding:6px 13px;font-size:11px;color:#666;font-weight:800;white-space:nowrap;flex-shrink:0}
+
+/* COUNTDOWN */
+.countdown-wrap{max-width:800px;margin:0 auto 24px;padding:0 36px}
+.countdown-card{background:#13131a;border:1px solid #1e1e28;border-radius:20px;padding:18px 22px}
+.countdown-label{font-size:10px;font-weight:800;color:#555;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:14px}
+.countdown-units{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cu{background:#0d0d0f;border:1px solid #1e1e28;border-radius:14px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.cu-num{font-size:30px;font-weight:900;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.cu-lbl{font-size:9px;font-weight:800;color:#444;letter-spacing:1px;text-transform:uppercase}
+.cu.days .cu-num{color:#3b82f6}.cu.hours .cu-num{color:#a78bfa}.cu.mins .cu-num{color:#f97316}.cu.secs .cu-num{color:#22c55e}
+
+/* CONTROLS */
+.controls-row{max-width:800px;margin:0 auto 14px;padding:0 36px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none}
+.controls-row::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;padding:8px 16px;border-radius:24px;background:#18181e;border:1px solid #28282f;color:#666;font-size:13px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.pill:hover{background:#222229;color:#aaa;border-color:#38383f}
+.pill.on{background:#3b82f6;border-color:#3b82f6;color:#fff}
+.pill.on-out{background:#22c55e;border-color:#22c55e;color:#fff}
+.pill.on-ret{background:#f97316;border-color:#f97316;color:#fff}
+.sep{width:1px;height:20px;background:#222229;flex-shrink:0}
+
+/* MAP */
+.map-container{max-width:800px;margin:0 auto 0;padding:0 36px}
+.map-aspect{width:100%;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid #1e1e26;position:relative}
+#map{width:100%;height:100%}
+#route-status{position:absolute;bottom:8px;left:10px;z-index:1000;background:rgba(13,13,15,0.88);border:1px solid #2a2a32;border-radius:10px;padding:4px 10px;font-size:10px;color:#666;font-weight:700;pointer-events:none}
+
+/* PROGRESS BAR */
+.progress-wrap{max-width:800px;margin:0 auto 16px;padding:0 36px}
+.progress-card{background:#13131a;border:1px solid #1e1e28;border-radius:18px;padding:14px 18px}
+.progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.progress-label{font-size:10px;font-weight:800;color:#555;letter-spacing:1.2px;text-transform:uppercase}
+.progress-pct{font-size:13px;font-weight:900;color:#3b82f6}
+.progress-track{width:100%;height:10px;background:#0d0d0f;border-radius:20px;overflow:hidden;border:1px solid #1e1e28}
+.progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width 1.2s cubic-bezier(0.4,0,0.2,1);width:0%}
+.progress-stops{display:flex;justify-content:space-between;margin-top:8px}
+.pdot{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pdot .dot{width:8px;height:8px;border-radius:50%;background:#1e1e28;border:2px solid #2a2a32;transition:all .3s}
+.pdot .dlbl{font-size:9px;font-weight:800;color:#333}
+.pdot.reached .dot{background:#3b82f6;border-color:#3b82f6}
+.pdot.reached .dlbl{color:#777}
+.pdot.current .dot{background:#22c55e;border-color:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.7)}
+.pdot.current .dlbl{color:#22c55e}
+.progress-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.prog-status{font-size:11px;font-weight:800;color:#22c55e}
+.prog-elapsed{font-size:11px;font-weight:800;color:#444}
+
+/* LEGEND */
+.legend-row{max-width:800px;margin:0 auto 26px;padding:0 36px;display:flex;gap:18px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:7px;font-size:11px;color:#555;font-weight:800}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* ITINERARY */
+.section-lbl{max-width:800px;margin:0 auto 10px;padding:0 36px;font-size:10px;font-weight:900;color:#444;letter-spacing:1.2px;text-transform:uppercase}
+.cards{max-width:800px;margin:0 auto;padding:0 36px;display:flex;flex-direction:column;gap:8px}
+.card{background:#13131a;border:1px solid #1e1e28;border-radius:16px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s,border-color .15s,transform .15s;-webkit-tap-highlight-color:transparent;user-select:none}
+.card:hover{background:#181820;border-color:#2e2e3e;transform:translateY(-1px)}
+.card:active{transform:scale(0.99)}
+.card-left{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+.card-day-lbl{font-size:9px;font-weight:900;color:#3b82f6;letter-spacing:1px;text-transform:uppercase;margin-bottom:1px}
+.card-name{font-size:16px;font-weight:900;color:#f0f0f5;letter-spacing:-0.2px}
+.card-country{font-size:11px;color:#555;font-weight:800;margin-top:1px}
+.card-date{font-size:11px;color:#383840;font-weight:800;white-space:nowrap;margin-left:auto}
+.card-arrow{color:#333;font-size:17px;margin-left:8px;flex-shrink:0;transition:transform .15s,color .15s}
+.card:hover .card-arrow,.card:active .card-arrow{color:#666;transform:translateX(3px)}
+
+/* OVERLAY & MODAL */
+.overlay{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);align-items:flex-end;justify-content:center;padding:0}
+.overlay.open{display:flex}
+.modal{background:#16161f;border:1px solid #2a2a38;border-top-left-radius:24px;border-top-right-radius:24px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(0.34,1.4,0.64,1);position:relative;-webkit-overflow-scrolling:touch}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:36px;height:4px;background:#2a2a38;border-radius:2px;margin:12px auto 0}
+.modal-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.07);border:none;color:#777;font-size:14px;line-height:28px;text-align:center;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;z-index:10;-webkit-tap-highlight-color:transparent}
+.modal-close:hover{background:rgba(255,255,255,0.12);color:#fff}
+.modal-photos{display:grid;grid-template-columns:repeat(3,1fr);height:150px;margin-top:10px}
+.modal-photos img{width:100%;height:150px;object-fit:cover;display:block}
+.modal-body{padding:20px 22px 40px}
+.modal-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.modal-day-label{font-size:9px;font-weight:900;color:#3b82f6;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:3px}
+.modal-title{font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.3px;line-height:1.1}
+.modal-meta{font-size:11px;color:#555;font-weight:800;margin-top:4px}
+.modal-divider{height:1px;background:#1e1e28;margin:14px 0}
+.modal-section-title{font-size:9px;font-weight:900;color:#444;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+.modal-desc{font-size:13px;color:#999;line-height:1.65;font-weight:700}
+.modal-bullets{list-style:none;display:flex;flex-direction:column;gap:8px}
+.modal-bullets li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#bbb;line-height:1.5;font-weight:700}
+.bull{width:6px;height:6px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:5px}
+.overnight-val{font-size:14px;font-weight:900;color:#ddd}
+.room-card{background:#0d0d0f;border:1px solid #1e1e28;border-radius:12px;padding:10px 13px}
+.room-type{font-size:9px;font-weight:900;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}
+.room-people{display:flex;flex-wrap:wrap;gap:5px}
+.room-chip{padding:4px 11px;border-radius:20px;font-size:12px;font-weight:900}
+.chip-double{background:#1a2535;border:1px solid #1e3a5f;color:#60a5fa}
+.chip-quad{background:#1a2520;border:1px solid #1e4a30;color:#4ade80}
+
+/* Leaflet */
+.lf-pin{cursor:pointer}
+.leaflet-popup{display:none!important}
+
+@media(min-width:600px){
+  .overlay{align-items:center;padding:24px 20px}
+  .modal{border-radius:24px;max-height:85vh}
+  .modal-handle{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="site-header">
+    <div>
+      <div class="site-title">Spain · Italy · France</div>
+      <div class="site-sub">3 – 11 April 2026 · Bus tour from Arad</div>
+    </div>
+    <div class="hbadge">9 stops · 3 countries</div>
+  </div>
+
+  <div class="countdown-wrap">
+    <div class="countdown-card">
+      <div class="countdown-label" id="cd-label">Days until departure</div>
+      <div class="countdown-units">
+        <div class="cu days"><div class="cu-num" id="cd-d">--</div><div class="cu-lbl">Days</div></div>
+        <div class="cu hours"><div class="cu-num" id="cd-h">--</div><div class="cu-lbl">Hours</div></div>
+        <div class="cu mins"><div class="cu-num" id="cd-m">--</div><div class="cu-lbl">Mins</div></div>
+        <div class="cu secs"><div class="cu-num" id="cd-s">--</div><div class="cu-lbl">Secs</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-row" id="ctrl"></div>
+
+  <div class="map-container">
+    <div class="map-aspect">
+      <div id="map"></div>
+      <div id="route-status">Loading road routes…</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap" style="display:none">
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="progress-label">Trip progress</span>
+        <span class="progress-pct" id="prog-pct">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+      <div class="progress-stops" id="prog-stops"></div>
+      <div class="progress-bottom">
+        <span class="prog-status" id="prog-status"></span>
+        <span class="prog-elapsed" id="prog-elapsed"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend-row">
+    <div class="leg-item"><div class="leg-dot" style="background:#3b82f6"></div><span>All stops</span></div>
+    <div class="leg-item"><div class="leg-dot" style="background:#22c55e"></div><span>Outbound</span></div>
+    <div class="leg-item"><div class="leg-dot" style="background:#f97316"></div><span>Return</span></div>
+  </div>
+
+  <div class="section-lbl">Itinerary</div>
+  <div class="cards" id="cards"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="modal-photos" id="modal-photos"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+var TRIP_START=new Date('2026-04-03T01:00:00Z').getTime();
+var TRIP_END  =new Date('2026-04-11T21:00:00Z').getTime();
+var TRIP_DUR  =TRIP_END-TRIP_START;
+var STOP_DATES=[
+  new Date('2026-04-03T01:00:00Z').getTime(),
+  new Date('2026-04-04T05:00:00Z').getTime(),
+  new Date('2026-04-05T05:00:00Z').getTime(),
+  new Date('2026-04-06T05:00:00Z').getTime(),
+  new Date('2026-04-07T05:00:00Z').getTime(),
+  new Date('2026-04-08T05:00:00Z').getTime(),
+  new Date('2026-04-09T05:00:00Z').getTime(),
+  new Date('2026-04-10T05:00:00Z').getTime(),
+  new Date('2026-04-11T05:00:00Z').getTime()
+];
+
+function pad(n){return String(Math.floor(n)).padStart(2,'0');}
+
+function tick(){
+  var now=Date.now(), diff=TRIP_START-now;
+  var lbl=document.getElementById('cd-label');
+  if(now>=TRIP_END){
+    lbl.textContent='Trip completed';
+    document.querySelector('.countdown-units').innerHTML='<div style="grid-column:1/-1;text-align:center;font-size:16px;font-weight:900;color:#888;padding:8px">Welcome home! 🏠</div>';
+    updateProgress(); return;
+  }
+  if(diff<=0){
+    lbl.textContent='Time left on trip';
+    var rem=TRIP_END-now;
+    document.getElementById('cd-d').textContent=pad(rem/86400000);
+    document.getElementById('cd-h').textContent=pad((rem%86400000)/3600000);
+    document.getElementById('cd-m').textContent=pad((rem%3600000)/60000);
+    document.getElementById('cd-s').textContent=pad((rem%60000)/1000);
+    updateProgress(); return;
+  }
+  lbl.textContent='Days until departure';
+  document.getElementById('cd-d').textContent=pad(diff/86400000);
+  document.getElementById('cd-h').textContent=pad((diff%86400000)/3600000);
+  document.getElementById('cd-m').textContent=pad((diff%3600000)/60000);
+  document.getElementById('cd-s').textContent=pad((diff%60000)/1000);
+}
+
+function updateProgress(){
+  var now=Date.now();
+  if(now<TRIP_START){document.getElementById('progress-wrap').style.display='none';return;}
+  document.getElementById('progress-wrap').style.display='block';
+  var pct=Math.min(100,Math.max(0,(now-TRIP_START)/TRIP_DUR*100));
+  document.getElementById('prog-fill').style.width=pct.toFixed(2)+'%';
+  document.getElementById('prog-pct').textContent=Math.round(pct)+'%';
+  var el=Math.min(now-TRIP_START,TRIP_DUR);
+  var eld=Math.floor(el/86400000), elh=Math.floor((el%86400000)/3600000);
+  document.getElementById('prog-elapsed').textContent=eld>0?eld+' day'+(eld!==1?'s':'')+' '+elh+' hr elapsed':elh+' hr elapsed';
+  var stEl=document.getElementById('prog-status');
+  stEl.textContent=now>=TRIP_END?'Trip complete':'Currently on the road';
+  stEl.style.color=now>=TRIP_END?'#888':'#22c55e';
+
+  var dotsEl=document.getElementById('prog-stops');
+  if(!dotsEl.children.length){
+    ['D1','D2','D3','D4','D5','D6','D7','D8','D9'].forEach(function(lbl,i){
+      var d=document.createElement('div');d.className='pdot';d.id='pdot-'+i;
+      d.innerHTML='<div class="dot"></div><div class="dlbl">'+lbl+'</div>';
+      d.addEventListener('click',(function(idx){return function(){openModal(STOPS[idx]);};})(i));
+      dotsEl.appendChild(d);
+    });
+  }
+  var last=-1;
+  STOP_DATES.forEach(function(t,i){
+    var d=document.getElementById('pdot-'+i);
+    if(d){d.classList.remove('reached','current');if(now>=t){d.classList.add('reached');last=i;}}
+  });
+  if(last>=0){var ld=document.getElementById('pdot-'+last);if(ld){ld.classList.remove('reached');ld.classList.add('current');}}
+}
+
+tick(); setInterval(tick,1000); setInterval(updateProgress,30000);
+
+/* ── DATA ── */
+var C_ALL='#3b82f6',C_OUT='#22c55e',C_BACK='#f97316';
+var ARAD={id:0,day:0,name:'Arad',country:'Romania',lat:46.1667,lng:21.3167};
+
+var STOPS=[
+  {id:1,day:1,name:'Trieste',country:'Italy',date:'Apr 03',lat:45.6503,lng:13.7683,dir:'out',room:'double',
+   desc:'Departure from Arad in the early morning. Visit of Trieste — ancient port of Italy. Visiting the Historic Centre. Overnight in the Trieste area.',
+   highlights:['Visiting the Historic Centre'],overnight:'Trieste area',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Trieste-Piazza_Unita_d%27Italia.jpg/320px-Trieste-Piazza_Unita_d%27Italia.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Canal_Grande_Trieste.jpg/320px-Canal_Grande_Trieste.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Miramare_Castle.jpg/320px-Miramare_Castle.jpg']},
+  {id:2,day:2,name:'Nice',country:'France',date:'Apr 04',lat:43.7102,lng:7.2620,dir:'out',room:'double',
+   desc:'Breakfast. Departure towards Nice — walking tour. Overnight in the Nice area.',
+   highlights:['Walking tour of Nice'],overnight:'Nice area',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Nice_Baie_des_Anges.jpg/320px-Nice_Baie_des_Anges.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Place_Massena_Nice.jpg/320px-Place_Massena_Nice.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Nice_vieille_ville_coucher_soleil.jpg/320px-Nice_vieille_ville_coucher_soleil.jpg']},
+  {id:3,day:3,name:'Monaco / Monte Carlo',country:'Monaco',date:'Apr 05',lat:43.7384,lng:7.4246,dir:'out',room:null,
+   desc:"Breakfast. Côte d'Azur. Visit of Monaco / Monte Carlo. Departure towards Spain through Marseille, Montpellier, Perpignan. Evening overnight in Lloret del Mar.",
+   highlights:['Visit of Monaco / Monte Carlo','Drive through Marseille, Montpellier, Perpignan'],overnight:'Lloret del Mar (evening arrival)',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Casino_de_Monte-Carlo.jpg/320px-Casino_de_Monte-Carlo.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Monaco_2019.jpg/320px-Monaco_2019.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Monaco_from_the_French_side.JPG/320px-Monaco_from_the_French_side.JPG']},
+  {id:4,day:4,name:'Lloret del Mar',country:'Spain',date:'Apr 06',lat:41.6996,lng:2.8390,dir:'out',room:'quad',
+   desc:'Lloret del Mar. Breakfast. Excursion to Barcelona — panoramic tour: Sagrada Família cathedral, Colina Montjuïc with the magic fountain, stroll on Bulevardul Ramblas, Aquarium. Camp Nou stadium visit. Overnight.',
+   highlights:['Sagrada Família cathedral','Colina Montjuïc with the magic fountain','Stroll on Bulevardul Ramblas','Aquarium','Camp Nou stadium visit'],overnight:'Lloret del Mar',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Sagrada_Familia_01.jpg/240px-Sagrada_Familia_01.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Font_Magica_de_Montjuic_02.jpg/320px-Font_Magica_de_Montjuic_02.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Las_Ramblas_de_Barcelona.jpg/320px-Las_Ramblas_de_Barcelona.jpg']},
+  {id:5,day:5,name:'Port Aventura',country:'Spain',date:'Apr 07',lat:41.0879,lng:1.1574,dir:'out',room:'quad',
+   desc:'Lloret del Mar. Breakfast. Excursion to Port Aventura — amusement park. Overnight.',
+   highlights:['Port Aventura — amusement park'],overnight:'Lloret del Mar',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/PortAventura_Park_-_Shambhala.jpg/320px-PortAventura_Park_-_Shambhala.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Dragon_Khan_PortAventura.jpg/320px-Dragon_Khan_PortAventura.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/PortAventura_overview.jpg/320px-PortAventura_overview.jpg']},
+  {id:6,day:6,name:'Barcelona',country:'Spain',date:'Apr 08',lat:41.3851,lng:2.1734,dir:'out',room:'quad',
+   desc:'Lloret del Mar. Breakfast. Excursion to Barcelona — Wax Museum or Picasso Museum, Royal Palace. Overnight.',
+   highlights:['Wax Museum or Picasso Museum','Royal Palace'],overnight:'Lloret del Mar',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Museu_Picasso_Barcelona.jpg/320px-Museu_Picasso_Barcelona.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Barri_G%C3%B2tic_-_Barcelona.jpg/320px-Barri_G%C3%B2tic_-_Barcelona.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/MNAC_Barcelona.jpg/320px-MNAC_Barcelona.jpg']},
+  {id:7,day:7,name:'Cannes',country:'France',date:'Apr 09',lat:43.5528,lng:7.0174,dir:'back',room:'double',
+   desc:'Departure towards Cannes — walking tour. Overnight in the Cannes area.',
+   highlights:['Walking tour of Cannes'],overnight:'Cannes area',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Cannes_Croisette.jpg/320px-Cannes_Croisette.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Palais_des_festivals_Cannes.jpg/320px-Palais_des_festivals_Cannes.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Cannes_vieux_port.jpg/320px-Cannes_vieux_port.jpg']},
+  {id:8,day:8,name:'Parma',country:'Italy',date:'Apr 10',lat:44.8015,lng:10.3279,dir:'back',room:'double',
+   desc:'Breakfast. Departure towards Parma — elegant city with a remarkable historic area. Visit: Basilica Santa Maria della Steccata, Cathedral, Ducal Palace. Overnight in the Venice area.',
+   highlights:['Basilica Santa Maria della Steccata','Cathedral','Ducal Palace'],overnight:'Venice area',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Cattedrale_di_Parma_facciata.jpg/240px-Cattedrale_di_Parma_facciata.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Steccata_parma_retro.jpg/320px-Steccata_parma_retro.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Venice_Canal_Grande.jpg/320px-Venice_Canal_Grande.jpg']},
+  {id:9,day:9,name:'Arad',country:'Romania',date:'Apr 11',lat:46.1667,lng:21.3167,dir:'back',room:null,
+   desc:'Breakfast. Departure towards Arad.',
+   highlights:['Breakfast','Departure towards Arad'],overnight:'Home',
+   photos:['https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Palatul_Cultural_Arad.jpg/320px-Palatul_Cultural_Arad.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Arad_Fortress_2.jpg/320px-Arad_Fortress_2.jpg','https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Primaria_Arad.jpg/320px-Primaria_Arad.jpg']}
+];
+
+setTimeout(updateProgress,0);
+
+/* ── MODAL ── */
+function pinSVG(day,w,h){
+  return '<svg viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" style="width:'+w+'px;height:'+h+'px;display:block;flex-shrink:0">'
+    +'<path d="M18 1C9.716 1 3 7.716 3 16c0 11.15 15 31 15 31S33 27.15 33 16C33 7.716 26.284 1 18 1z" fill="'+C_ALL+'"/>'
+    +'<circle cx="18" cy="16" r="7" fill="rgba(0,0,0,0.22)"/>'
+    +'<text x="18" y="20" text-anchor="middle" font-family="Nunito,sans-serif" font-size="10" font-weight="900" fill="#fff">'+day+'</text>'
+    +'</svg>';
+}
+function roomHTML(room){
+  if(!room)return '';
+  var inner=room==='double'
+    ?'<div class="room-people"><span class="room-chip chip-double">Paul</span><span class="room-chip chip-double">Luca</span></div>'
+    :'<div class="room-people"><span class="room-chip chip-quad">Paul</span><span class="room-chip chip-quad">Luca</span><span class="room-chip chip-quad">Matei</span><span class="room-chip chip-quad">Bota</span></div>';
+  return '<div class="modal-divider"></div>'
+    +'<div class="modal-section-title">Room</div>'
+    +'<div class="room-card"><div class="room-type">'+(room==='double'?'Double room':'Quadruple room')+'</div>'+inner+'</div>';
+}
+
+var overlay=document.getElementById('overlay');
+var modalOpen=false;
+
+function openModal(s){
+  document.getElementById('modal-photos').innerHTML=s.photos.map(function(u){
+    return '<img src="'+u+'" loading="lazy" onerror="this.style.display=\'none\'">';
+  }).join('');
+  var dirLabel=s.dir==='out'?'<span style="color:'+C_OUT+'">Outbound</span>':'<span style="color:'+C_BACK+'">Return</span>';
+  var bullets=s.highlights.map(function(h){return'<li><span class="bull"></span><span>'+h+'</span></li>';}).join('');
+  document.getElementById('modal-body').innerHTML=
+    '<div class="modal-header"><div>'+pinSVG(s.day,30,40)+'</div>'
+      +'<div><div class="modal-day-label">Day '+s.day+'</div>'
+        +'<div class="modal-title">'+s.name+'</div>'
+        +'<div class="modal-meta">'+s.country+' · '+s.date+' · '+dirLabel+'</div>'
+      +'</div></div>'
+    +'<div class="modal-section-title">Description</div>'
+    +'<p class="modal-desc">'+s.desc+'</p>'
+    +'<div class="modal-divider"></div>'
+    +'<div class="modal-section-title">Visits</div>'
+    +'<ul class="modal-bullets">'+bullets+'</ul>'
+    +'<div class="modal-divider"></div>'
+    +'<div class="modal-section-title">Overnight</div>'
+    +'<div class="overnight-val">'+s.overnight+'</div>'
+    +roomHTML(s.room);
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  modalOpen=true;
+}
+function closeModal(){
+  overlay.classList.remove('open');
+  document.body.style.overflow='';
+  modalOpen=false;
+}
+document.getElementById('modal-close').addEventListener('click',closeModal);
+overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+
+/* swipe down to close on mobile */
+var touchStartY=0;
+document.getElementById('modal').addEventListener('touchstart',function(e){touchStartY=e.touches[0].clientY;},{passive:true});
+document.getElementById('modal').addEventListener('touchend',function(e){
+  if(e.changedTouches[0].clientY-touchStartY>80)closeModal();
+},{passive:true});
+
+/* ── MAP ── */
+var map=L.map('map',{center:[44,7.5],zoom:5,zoomControl:true,tap:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19,pane:'shadowPane'}).addTo(map);
+map.zoomControl.setPosition('bottomright');
+
+var mapMarkers={},lines=[],activeFilter='all',routeCache={};
+var statusEl=document.getElementById('route-status');
+function setStatus(t){statusEl.textContent=t;statusEl.style.display=t?'block':'none';}
+function clearMap(){Object.values(mapMarkers).forEach(function(m){map.removeLayer(m);});mapMarkers={};lines.forEach(function(l){map.removeLayer(l);});lines=[];}
+
+function makeLeafletIcon(s,big){
+  var sz=big?38:32,h=Math.round(sz*48/36);
+  return L.divIcon({
+    className:'lf-pin',
+    html:'<svg viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg" style="width:'+sz+'px;height:'+h+'px;display:block">'
+      +'<path d="M18 1C9.716 1 3 7.716 3 16c0 11.15 15 31 15 31S33 27.15 33 16C33 7.716 26.284 1 18 1z" fill="'+C_ALL+'"/>'
+      +'<circle cx="18" cy="16" r="7" fill="rgba(0,0,0,0.22)"/>'
+      +'<text x="18" y="20" text-anchor="middle" font-family="Nunito,sans-serif" font-size="10" font-weight="900" fill="#fff">'+s.day+'</text>'
+      +'</svg>',
+    iconSize:[sz,h],iconAnchor:[sz/2,h],popupAnchor:[0,0]
+  });
+}
+
+function addMarker(s){
+  var m=L.marker([s.lat,s.lng],{icon:makeLeafletIcon(s,false),interactive:true,bubblingMouseEvents:false}).addTo(map);
+  m.on('mouseover',function(){if(!modalOpen)m.setIcon(makeLeafletIcon(s,true));});
+  m.on('mouseout', function(){m.setIcon(makeLeafletIcon(s,false));});
+  m.on('click',(function(stop){return function(e){L.DomEvent.stop(e);m.setIcon(makeLeafletIcon(stop,false));openModal(stop);};})(s));
+  mapMarkers[s.id]=m;
+}
+
+function fetchRoute(a,b,cb){
+  var key=a[0].toFixed(3)+a[1].toFixed(3)+b[0].toFixed(3)+b[1].toFixed(3);
+  if(routeCache[key]){cb(routeCache[key]);return;}
+  fetch('https://router.project-osrm.org/route/v1/driving/'+a[1]+','+a[0]+';'+b[1]+','+b[0]+'?overview=full&geometries=geojson')
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.routes&&d.routes[0]){var ll=d.routes[0].geometry.coordinates.map(function(c){return[c[1],c[0]];});routeCache[key]=ll;cb(ll);}
+      else cb(null);
+    }).catch(function(){cb(null);});
+}
+function drawRoadRoute(stops,color,onDone){
+  if(stops.length<2){if(onDone)onDone();return;}
+  var total=stops.length-1,done=0;
+  for(var i=0;i<stops.length-1;i++){
+    (function(a,b){
+      fetchRoute([a.lat,a.lng],[b.lat,b.lng],function(ll){
+        var l=L.polyline(ll||[[a.lat,a.lng],[b.lat,b.lng]],{color:color,weight:4,opacity:0.85,lineJoin:'round',lineCap:'round'}).addTo(map);
+        lines.push(l);if(++done>=total&&onDone)onDone();
+      });
+    })(stops[i],stops[i+1]);
+  }
+}
+function render(){
+  clearMap();
+  var pending=0,resolved=0;
+  function onSeg(){if(++resolved>=pending)setStatus('');}
+  setStatus('Loading road routes…');
+  if(activeFilter==='all'){
+    STOPS.forEach(function(s){addMarker(s);});
+    var chain=[ARAD].concat(STOPS);pending=chain.length-1;drawRoadRoute(chain,C_ALL,onSeg);
+  } else if(activeFilter==='out'){
+    var ol=[ARAD].concat(STOPS.filter(function(s){return s.dir==='out';}));
+    ol.forEach(function(s){if(s.id>0)addMarker(s);});pending=ol.length-1;drawRoadRoute(ol,C_OUT,onSeg);
+  } else {
+    var pa=STOPS.find(function(s){return s.id===5;});
+    var bl=[pa].concat(STOPS.filter(function(s){return s.dir==='back';}));
+    bl.forEach(function(s){addMarker(s);});pending=bl.length-1;drawRoadRoute(bl,C_BACK,onSeg);
+  }
+  if(pending===0)setStatus('');
+  renderCards();
+  map.flyTo([44,7.5],5,{duration:0.8});
+}
+
+function renderCards(){
+  var el=document.getElementById('cards');el.innerHTML='';
+  STOPS.forEach(function(s){
+    var div=document.createElement('div');div.className='card';
+    div.innerHTML='<div class="card-left"><div>'+pinSVG(s.day,22,30)+'</div>'
+      +'<div><div class="card-day-lbl">Day '+s.day+'</div><div class="card-name">'+s.name+'</div><div class="card-country">'+s.country+'</div></div></div>'
+      +'<div class="card-date">'+s.date+'</div><div class="card-arrow">›</div>';
+    div.addEventListener('click',function(){openModal(s);});
+    el.appendChild(div);
+  });
+}
+
+var ctrlEl=document.getElementById('ctrl');
+var allBtn,outBtn,backBtn;
+function mkpill(html,fn){var b=document.createElement('button');b.className='pill';b.innerHTML=html;b.addEventListener('click',fn);ctrlEl.appendChild(b);return b;}
+function mksep(){var d=document.createElement('div');d.className='sep';ctrlEl.appendChild(d);}
+function clearPills(){[allBtn,outBtn,backBtn].forEach(function(b){b.classList.remove('on','on-out','on-ret');});}
+allBtn=mkpill('All stops',function(){clearPills();allBtn.classList.add('on');activeFilter='all';render();}); allBtn.classList.add('on');
+mksep();
+outBtn=mkpill('← Outbound',function(){clearPills();outBtn.classList.add('on-out');activeFilter='out';render();});
+backBtn=mkpill('→ Return',function(){clearPills();backBtn.classList.add('on-ret');activeFilter='back';render();});
+render();
+</script>
+</body>
+</html>
